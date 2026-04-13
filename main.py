@@ -1,71 +1,71 @@
 import flet as ft
-import time
+
+# NO IMPORTES NADA MÁS AQUÍ ARRIBA (ni json, ni os, ni time)
+# Queremos que Flet arranque en milisegundos.
 
 def main(page: ft.Page):
-    # CONFIGURACIÓN INICIAL ULTRA-RÁPIDA
+    # Configuración básica inmediata
     page.title = "App Grupos"
     page.theme_mode = ft.ThemeMode.LIGHT
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
     
-    # Mostramos algo DE INMEDIATO para que el sistema no cierre la app
-    log_status = ft.Text("Iniciando módulos de sistema...", color="blue")
+    # Mostramos un mensaje de "Cargando" de inmediato
+    # Esto le dice a Android: "Estoy vivo, no me cierres"
     page.add(
         ft.Container(
             content=ft.Column([
                 ft.ProgressRing(),
-                log_status,
+                ft.Text("Iniciando motor de datos...", size=16, color="blue")
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            alignment=ft.alignment.center,
-            expand=True
+            alignment=ft.alignment.center
         )
     )
     page.update()
 
-    # CARGA DIFERIDA (Aquí es donde Android revisa las librerías)
+    # CARGA PESADA DESPUÉS DEL UPDATE
+    # Aquí es donde Android revisará las librerías que vimos en el log
     try:
         import json
-        import os
-        log_status.value = "Cargando base de datos..."
-        page.update()
+        import time
         
-        # Simulamos una pequeña espera para que el SO valide los permisos que vimos en el log
-        time.sleep(0.5) 
+        # Simulamos una pausa técnica para que el S23 termine de validar
+        time.sleep(1) 
         
-        # Lógica de carga de datos
+        # Lógica de datos
         res = page.client_storage.get("datos_grupos")
         lista_nombres = json.loads(res) if res else []
         
+        # UI Final
+        def agregar(e):
+            if input_nombre.value.strip():
+                lista_nombres.append(input_nombre.value.strip())
+                page.client_storage.set("datos_grupos", json.dumps(lista_nombres))
+                input_nombre.value = ""
+                refrescar()
+
+        def refrescar():
+            lista_visual.controls.clear()
+            for n in lista_nombres:
+                lista_visual.controls.append(ft.ListTile(title=ft.Text(n)))
+            page.update()
+
+        input_nombre = ft.TextField(label="Nuevo Grupo", expand=True)
+        lista_visual = ft.Column(scroll=ft.ScrollMode.AUTO)
+
+        # Limpiamos el mensaje de carga y mostramos la App real
+        page.clean()
+        page.add(
+            ft.AppBar(title=ft.Text("GESTIÓN DE GRUPOS"), bgcolor=ft.colors.SURFACE_VARIANT),
+            ft.Row([input_nombre, ft.IconButton(icon=ft.icons.ADD, on_click=agregar)]),
+            lista_visual
+        )
+        refrescar()
+        
     except Exception as e:
-        log_status.value = f"Error de inicio: {str(e)}"
+        page.clean()
+        page.add(ft.Text(f"Error crítico: {str(e)}", color="red"))
         page.update()
-        return
-
-    # UI PRINCIPAL (Solo se carga cuando lo anterior termina)
-    def agregar(e):
-        if input_nombre.value.strip():
-            lista_nombres.append(input_nombre.value.strip())
-            page.client_storage.set("datos_grupos", json.dumps(lista_nombres))
-            input_nombre.value = ""
-            refrescar()
-
-    def refrescar():
-        lista_visual.controls.clear()
-        for n in lista_nombres:
-            lista_visual.controls.append(ft.ListTile(title=ft.Text(n)))
-        page.update()
-
-    input_nombre = ft.TextField(label="Nombre del Grupo", expand=True)
-    lista_visual = ft.Column(scroll=ft.ScrollMode.AUTO)
-
-    # Limpiamos el splash screen y mostramos la app
-    page.clean()
-    page.add(
-        ft.AppBar(title=ft.Text("GESTIÓN DE GRUPOS"), bgcolor=ft.colors.SURFACE_VARIANT),
-        ft.Row([input_nombre, ft.IconButton(icon=ft.icons.ADD, on_click=agregar, icon_color="blue")]),
-        lista_visual
-    )
-    refrescar()
 
 if __name__ == "__main__":
-    # Forzamos el puerto y el modo de vista nativo
-    # El puerto 8080 suele estar libre en el localhost de Android
+    # Forzamos puerto y vista para evitar bloqueos de red interna
     ft.app(target=main, view=ft.AppView.FLET_APP, port=8080)
