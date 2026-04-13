@@ -3,35 +3,33 @@ import json
 import time
 
 def main(page: ft.Page):
-    # 1. CONFIGURACIÓN INICIAL INMEDIATA
+    # 1. Configuración de página inmediata para evitar el timeout de Android
     page.title = "App Grupos"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     
-    # Mostramos un mensaje de carga rápido para evitar el timeout de Android
-    splash_text = ft.Text("Cargando módulos de sistema...", size=16, color="blue")
+    # Splash screen de carga inmediata
     page.add(
         ft.Container(
             content=ft.Column([
                 ft.ProgressRing(),
-                splash_text,
+                ft.Text("Iniciando componentes nativos...", color="blue")
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=ft.alignment.center
         )
     )
     page.update()
 
-    # 2. CARGA DE DATOS Y LÓGICA (Aquí el S23 audita las librerías)
     try:
-        # Simulamos una espera mínima para que el kernel termine de validar
+        # 2. Carga de Datos y Lógica
+        # Un pequeño respiro para que el kernel de Samsung termine su auditoría
         time.sleep(0.5) 
         
-        # Intentamos recuperar datos guardados
+        # Recuperar datos guardados
         res = page.client_storage.get("datos_grupos")
         lista_nombres = json.loads(res) if res else []
-        
-        # Funciones de la aplicación
+
         def agregar(e):
             if input_nombre.value.strip():
                 lista_nombres.append(input_nombre.value.strip())
@@ -44,13 +42,13 @@ def main(page: ft.Page):
             for n in lista_nombres:
                 lista_visual.controls.append(
                     ft.ListTile(
-                        leading=ft.Icon(ft.icons.GROUP),
+                        leading=ft.Icon(ft.icons.GROUP, color="blue"),
                         title=ft.Text(n)
                     )
                 )
             page.update()
 
-        # Componentes de la UI
+        # Componentes de la interfaz
         input_nombre = ft.TextField(
             label="Nombre del Grupo", 
             expand=True,
@@ -58,8 +56,8 @@ def main(page: ft.Page):
         )
         lista_visual = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
 
-        # 3. CONSTRUCCIÓN DE LA INTERFAZ FINAL
-        page.clean() # Borramos el círculo de carga
+        # 3. Construcción de la UI Final
+        page.clean()
         page.add(
             ft.AppBar(
                 title=ft.Text("GESTIÓN DE GRUPOS"), 
@@ -67,25 +65,24 @@ def main(page: ft.Page):
             ),
             ft.Row([
                 input_nombre, 
-                ft.IconButton(icon=ft.icons.ADD, on_click=agregar, icon_color="blue")
+                ft.ElevatedButton("AÑADIR", on_click=agregar)
             ]),
             lista_visual
         )
         
-        # Llenamos la lista con lo que había guardado
         refrescar()
         
-        # FORZAMOS LA VISIBILIDAD (Importante para el modo HIDDEN)
+        # Despertamos la ventana manualmente (Muy importante para Samsung)
         page.window_visible = True
         page.update()
 
     except Exception as e:
         page.clean()
-        page.add(ft.Text(f"Error crítico en el S23: {str(e)}", color="red"))
+        page.add(ft.Text(f"Error técnico: {str(e)}", color="red"))
         page.update()
 
 if __name__ == "__main__":
-    # Forzamos puerto 8080 y vista HIDDEN para que Android no sospeche del arranque
+    # Usamos FLET_APP_HIDDEN y puerto 8080 para máxima compatibilidad
     ft.app(
         target=main, 
         view=ft.AppView.FLET_APP_HIDDEN, 
