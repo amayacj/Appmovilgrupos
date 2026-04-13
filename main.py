@@ -1,39 +1,87 @@
 import flet as ft
-import random
-import math
+import json
 
 def main(page: ft.Page):
-    page.title = "Creador de Equipos Pro"    
-    page.theme_mode = ft.ThemeMode.SYSTEM
-    
-    lista_input = ft.TextField(label="Lista de Personas", multiline=True, min_lines=3)
-    valor_input = ft.TextField(label="Cantidad", value="3", width=100)
-    modo_radio = ft.RadioGroup(content=ft.Row([
-        ft.Radio(value="por_persona", label="Personas/Grupo"),
-        ft.Radio(value="por_grupo", label="Num. Grupos")
-    ]))
-    modo_radio.value = "por_persona"
-    resultado_col = ft.Column(scroll=ft.ScrollMode.ADAPTIVE)
+    page.title = "CREADOR DE GRUPOS PRO"
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.bgcolor = "white"
+    page.padding = 20
 
-    def generar(e):
-        items = [i.strip() for i in lista_input.value.split(",") if i.strip()]
-        if not items: return
-        valor = int(valor_input.value)
-        parejas = [i for i in items if "-" in i]
-        indivs = [i for i in items if "-" not in i]
-        random.shuffle(parejas); random.shuffle(indivs)
-        num_g = valor if modo_radio.value == "por_grupo" else math.ceil(len(items)/valor)
-        grupos = [[] for _ in range(max(1, num_g))]
-        for i, p in enumerate(parejas): grupos[i % len(grupos)].append(p)
-        for p in indivs: grupos.sort(key=len); grupos[0].append(p)
-        resultado_col.controls.clear()
-        for i, g in enumerate(grupos):
-            if g: resultado_col.controls.append(ft.Text(f"Grupo {i+1}: {', '.join(g)}", size=16))
+    # --- Persistencia de Datos ---
+    def obtener_datos():
+        datos = page.client_storage.get("lista_trabajo")
+        return json.loads(datos) if datos else []
+
+    lista_integrantes = obtener_datos()
+
+    # --- Funciones de Lógica ---
+    def actualizar_lista():
+        columna_lista.controls.clear()
+        for nombre in lista_integrantes:
+            columna_lista.controls.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon("person", color="cyan700"),
+                        ft.Text(nombre, size=16, weight="medium", expand=True),
+                        ft.IconButton("delete", icon_color="red400", data=nombre, on_click=borrar_nombre)
+                    ]),
+                    bgcolor="#f0f4f8",
+                    padding=10,
+                    border_radius=10
+                )
+            )
         page.update()
 
-    page.add(ft.Text("Creador de Equipos", size=30, weight="bold"), lista_input, modo_radio, valor_input,
-             ft.ElevatedButton("Generar", on_click=generar), ft.Divider(), resultado_col)
+    def agregar_nombre(e):
+        if campo_input.value.strip():
+            lista_integrantes.append(campo_input.value.strip())
+            campo_input.value = ""
+            actualizar_lista()
+        else:
+            campo_input.error_text = "Escribe un nombre"
+            page.update()
+
+    def borrar_nombre(e):
+        lista_integrantes.remove(e.control.data)
+        actualizar_lista()
+
+    def grabar_lista(e):
+        page.client_storage.set("lista_trabajo", json.dumps(lista_integrantes))
+        page.snack_bar = ft.SnackBar(ft.Text("¡Lista guardada en memoria!"))
+        page.snack_bar.open = True
+        page.update()
+
+    # --- Componentes UI ---
+    cabecera = ft.Column([
+        ft.Text("CREADOR DE GRUPOS", size=28, weight="bold", color="cyan800"),
+        ft.Text("Herramienta de Trabajo", size=16, color="grey600"),
+        ft.Divider(height=20)
+    ])
+
+    campo_input = ft.TextField(label="Nombre del Integrante", expand=True, on_submit=agregar_nombre)
+    btn_add = ft.FloatingActionButton(icon="add", on_click=agregar_nombre, bgcolor="cyan700")
+    
+    columna_lista = ft.Column(scroll="auto", expand=True)
+
+    # --- Estructura ---
+    page.add(
+        cabecera,
+        ft.Row([campo_input, btn_add]),
+        ft.Text("Integrantes Actuales:", weight="bold", size=18),
+        columna_lista
+    )
+
+    page.floating_action_button = ft.FloatingActionButton(
+        icon="save", bgcolor="cyan_accent", on_click=grabar_lista, tooltip="Grabar Lista"
+    )
+
+    actualizar_lista()
 
 if __name__ == "__main__":
-    ft.app(target=main)
-
+    import os
+    # Si detecta que estás en el entorno de la Chromebook (Linux/Crostini), abre el navegador
+    # En el celular, esto se ignorará y abrirá la App normal
+    if os.environ.get("TERM"): 
+        ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+    else:
+        ft.app(target=main)
