@@ -1,41 +1,37 @@
 import flet as ft
-
-# NO IMPORTES NADA MÁS AQUÍ ARRIBA (ni json, ni os, ni time)
-# Queremos que Flet arranque en milisegundos.
+import json
+import time
 
 def main(page: ft.Page):
-    # Configuración básica inmediata
+    # 1. CONFIGURACIÓN INICIAL INMEDIATA
     page.title = "App Grupos"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     
-    # Mostramos un mensaje de "Cargando" de inmediato
-    # Esto le dice a Android: "Estoy vivo, no me cierres"
+    # Mostramos un mensaje de carga rápido para evitar el timeout de Android
+    splash_text = ft.Text("Cargando módulos de sistema...", size=16, color="blue")
     page.add(
         ft.Container(
             content=ft.Column([
                 ft.ProgressRing(),
-                ft.Text("Iniciando motor de datos...", size=16, color="blue")
+                splash_text,
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             alignment=ft.alignment.center
         )
     )
     page.update()
 
-    # CARGA PESADA DESPUÉS DEL UPDATE
-    # Aquí es donde Android revisará las librerías que vimos en el log
+    # 2. CARGA DE DATOS Y LÓGICA (Aquí el S23 audita las librerías)
     try:
-        import json
-        import time
+        # Simulamos una espera mínima para que el kernel termine de validar
+        time.sleep(0.5) 
         
-        # Simulamos una pausa técnica para que el S23 termine de validar
-        time.sleep(1) 
-        
-        # Lógica de datos
+        # Intentamos recuperar datos guardados
         res = page.client_storage.get("datos_grupos")
         lista_nombres = json.loads(res) if res else []
         
-        # UI Final
+        # Funciones de la aplicación
         def agregar(e):
             if input_nombre.value.strip():
                 lista_nombres.append(input_nombre.value.strip())
@@ -46,26 +42,52 @@ def main(page: ft.Page):
         def refrescar():
             lista_visual.controls.clear()
             for n in lista_nombres:
-                lista_visual.controls.append(ft.ListTile(title=ft.Text(n)))
+                lista_visual.controls.append(
+                    ft.ListTile(
+                        leading=ft.Icon(ft.icons.GROUP),
+                        title=ft.Text(n)
+                    )
+                )
             page.update()
 
-        input_nombre = ft.TextField(label="Nuevo Grupo", expand=True)
-        lista_visual = ft.Column(scroll=ft.ScrollMode.AUTO)
+        # Componentes de la UI
+        input_nombre = ft.TextField(
+            label="Nombre del Grupo", 
+            expand=True,
+            on_submit=agregar
+        )
+        lista_visual = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
 
-        # Limpiamos el mensaje de carga y mostramos la App real
-        page.clean()
+        # 3. CONSTRUCCIÓN DE LA INTERFAZ FINAL
+        page.clean() # Borramos el círculo de carga
         page.add(
-            ft.AppBar(title=ft.Text("GESTIÓN DE GRUPOS"), bgcolor=ft.colors.SURFACE_VARIANT),
-            ft.Row([input_nombre, ft.IconButton(icon=ft.icons.ADD, on_click=agregar)]),
+            ft.AppBar(
+                title=ft.Text("GESTIÓN DE GRUPOS"), 
+                bgcolor=ft.colors.SURFACE_VARIANT
+            ),
+            ft.Row([
+                input_nombre, 
+                ft.IconButton(icon=ft.icons.ADD, on_click=agregar, icon_color="blue")
+            ]),
             lista_visual
         )
+        
+        # Llenamos la lista con lo que había guardado
         refrescar()
         
+        # FORZAMOS LA VISIBILIDAD (Importante para el modo HIDDEN)
+        page.window_visible = True
+        page.update()
+
     except Exception as e:
         page.clean()
-        page.add(ft.Text(f"Error crítico: {str(e)}", color="red"))
+        page.add(ft.Text(f"Error crítico en el S23: {str(e)}", color="red"))
         page.update()
 
 if __name__ == "__main__":
-    # Forzamos puerto y vista para evitar bloqueos de red interna
-    ft.app(target=main, view=ft.AppView.FLET_APP, port=8080)
+    # Forzamos puerto 8080 y vista HIDDEN para que Android no sospeche del arranque
+    ft.app(
+        target=main, 
+        view=ft.AppView.FLET_APP_HIDDEN, 
+        port=8080
+    )
