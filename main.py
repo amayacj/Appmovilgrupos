@@ -1,20 +1,27 @@
 import flet as ft
 import json
+import os
 
 def main(page: ft.Page):
-    page.title = "CREADOR DE GRUPOS PRO"
+    # --- Configuración Base ---
+    page.title = "CREADOR DE GRUPOS"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = "white"
     page.padding = 20
+    # Esto ayuda a que el teclado del celular no tape los campos
+    page.scroll = ft.ScrollMode.ADAPTIVE 
 
-    # --- Persistencia de Datos ---
+    # --- Persistencia Segura ---
     def obtener_datos():
-        datos = page.client_storage.get("lista_trabajo")
-        return json.loads(datos) if datos else []
+        try:
+            datos = page.client_storage.get("lista_trabajo_v2")
+            return json.loads(datos) if datos else []
+        except:
+            return []
 
     lista_integrantes = obtener_datos()
 
-    # --- Funciones de Lógica ---
+    # --- Lógica de la Interfaz ---
     def actualizar_lista():
         columna_lista.controls.clear()
         for nombre in lista_integrantes:
@@ -22,7 +29,7 @@ def main(page: ft.Page):
                 ft.Container(
                     content=ft.Row([
                         ft.Icon("person", color="cyan700"),
-                        ft.Text(nombre, size=16, weight="medium", expand=True),
+                        ft.Text(nombre, size=16, weight="medium", expand=True, color="black"),
                         ft.IconButton("delete", icon_color="red400", data=nombre, on_click=borrar_nombre)
                     ]),
                     bgcolor="#f0f4f8",
@@ -36,6 +43,7 @@ def main(page: ft.Page):
         if campo_input.value.strip():
             lista_integrantes.append(campo_input.value.strip())
             campo_input.value = ""
+            campo_input.error_text = ""
             actualizar_lista()
         else:
             campo_input.error_text = "Escribe un nombre"
@@ -46,42 +54,54 @@ def main(page: ft.Page):
         actualizar_lista()
 
     def grabar_lista(e):
-        page.client_storage.set("lista_trabajo", json.dumps(lista_integrantes))
-        page.snack_bar = ft.SnackBar(ft.Text("¡Lista guardada en memoria!"))
-        page.snack_bar.open = True
-        page.update()
+        try:
+            page.client_storage.set("lista_trabajo_v2", json.dumps(lista_integrantes))
+            page.snack_bar = ft.SnackBar(ft.Text("¡Lista guardada con éxito!"))
+            page.snack_bar.open = True
+            page.update()
+        except:
+            pass
 
     # --- Componentes UI ---
     cabecera = ft.Column([
-        ft.Text("CREADOR DE GRUPOS", size=28, weight="bold", color="cyan800"),
-        ft.Text("Herramienta de Trabajo", size=16, color="grey600"),
-        ft.Divider(height=20)
+        ft.Text("CREADOR DE GRUPOS", size=26, weight="bold", color="cyan800"),
+        ft.Text("Herramienta de Trabajo", size=14, color="grey600"),
+        ft.Divider(height=10, thickness=1)
     ])
 
-    campo_input = ft.TextField(label="Nombre del Integrante", expand=True, on_submit=agregar_nombre)
+    campo_input = ft.TextField(
+        label="Nombre del Integrante", 
+        expand=True, 
+        on_submit=agregar_nombre,
+        border_radius=10
+    )
+    
     btn_add = ft.FloatingActionButton(icon="add", on_click=agregar_nombre, bgcolor="cyan700")
     
-    columna_lista = ft.Column(scroll="auto", expand=True)
+    columna_lista = ft.Column(scroll="auto", expand=True, spacing=10)
 
-    # --- Estructura ---
+    # --- Construcción Final ---
     page.add(
         cabecera,
-        ft.Row([campo_input, btn_add]),
-        ft.Text("Integrantes Actuales:", weight="bold", size=18),
-        columna_lista
+        ft.Row([campo_input, btn_add], alignment="center"),
+        ft.Text("Integrantes Actuales:", weight="bold", size=16, color="black"),
+        ft.Container(content=columna_lista, expand=True)
     )
 
     page.floating_action_button = ft.FloatingActionButton(
-        icon="save", bgcolor="cyan_accent", on_click=grabar_lista, tooltip="Grabar Lista"
+        icon="save", 
+        bgcolor="cyan", 
+        on_click=grabar_lista, 
+        tooltip="Grabar Lista"
     )
 
     actualizar_lista()
 
 if __name__ == "__main__":
-    import os
-    # Si detecta que estás en el entorno de la Chromebook (Linux/Crostini), abre el navegador
-    # En el celular, esto se ignorará y abrirá la App normal
-    if os.environ.get("TERM"): 
+    # Lógica Universal: 
+    # Si detecta entorno de terminal (Laptop), usa Web. 
+    # Si no (Celular/GitHub Actions), usa modo estándar.
+    if os.environ.get("TERM"):
         ft.app(target=main, view=ft.AppView.WEB_BROWSER)
     else:
         ft.app(target=main)
