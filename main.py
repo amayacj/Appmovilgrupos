@@ -3,7 +3,7 @@ import random
 import math
 
 def main(page: ft.Page):
-    page.title = "Creador de Equipos Pro"
+    page.title = "Creador de Equipos Pro"    
     page.theme_mode = ft.ThemeMode.SYSTEM
     
     lista_input = ft.TextField(label="Lista de Personas", multiline=True, min_lines=3)
@@ -35,5 +35,5 @@ def main(page: ft.Page):
              ft.ElevatedButton("Generar", on_click=generar), ft.Divider(), resultado_col)
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8080, host="0.0.0.0")
+    ft.app(target=main)
 
