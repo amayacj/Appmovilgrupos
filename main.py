@@ -66,5 +66,6 @@ def main(page: ft.Page):
     refrescar()
 
 if __name__ == "__main__":
-    # Importante: No uses el modo web, usa el modo nativo para evitar más capas de red
-    ft.app(target=main)
+    # Forzamos el puerto y el modo de vista nativo
+    # El puerto 8080 suele estar libre en el localhost de Android
+    ft.app(target=main, view=ft.AppView.FLET_APP, port=8080)
