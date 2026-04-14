@@ -1,3 +1,9 @@
+def main(page: ft.Page):
+    # AGREGA ESTO:
+    print("Iniciando Versión WEB_BROWSER 2.0") 
+    page.snack_bar = ft.SnackBar(ft.Text("Versión 2.0 Cargada"))
+    page.snack_bar.open = True
+    # ... resto del código
 import flet as ft
 import json
 import time
